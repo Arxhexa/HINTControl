@@ -1,67 +1,37 @@
-# This is a GitHub Actions workflow to build the Windows x86 version of your app.
-# It follows the instructions from your project's README.
+name: Build Windows x86 with Conveyor
 
-name: Build for Windows (x86)
-
-# This section defines when the action will run.
 on:
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-  # Runs on pushes to the main/master branch
   push:
-    branches: [ "main", "master" ]
-
-  # (Optional) Runs on pull requests targeting the main/master branch
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: [ main ]
 
 jobs:
-  # The name of the job
-  build-windows:
-    # Conveyor can cross-compile, so we can use a cheaper/faster Linux runner
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest  # Linux runner is sufficient and cost-effective for Windows builds
 
     steps:
-      # Step 1: Check out your repository's code
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Set up the Java Development Kit (JDK) needed for the Gradle build
-      # Most Kotlin Multiplatform projects use Java 17, but you can change this if needed.
-      - name: Set up JDK 17
+      - name: Set up JDK 17  # Adjust version if your project uses a different JDK
         uses: actions/setup-java@v4
         with:
+          distribution: 'temurin'  # Or 'zulu', etc., based on your needs
           java-version: '17'
-          distribution: 'temurin'
 
-      # Step 3: Run the Gradle build command
-      # This corresponds to "./gradlew :desktop:build"
-      # We add 'chmod' to ensure the gradlew script is executable on the runner.
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
       - name: Build with Gradle
-        run: |
-          chmod +x ./gradlew
-          ./gradlew :desktop:build
+        run: ./gradlew :desktop:build
 
-      # Step 4: Set up Conveyor
-      # This uses the official action to download and install Conveyor.
-      # For public GitHub repos, a license key is often not needed if your
-      # conveyor.conf file points to your repo. For private repos,
-      # you would need to add a CONVEYOR_LICENSE_KEY secret.
-      - name: Set up Conveyor
-        uses: hydraulic/conveyor-action@v1
+      - name: Package with Conveyor
+        uses: hydraulic-software/conveyor/actions/build@v19.0  # Use the latest version; confirm on https://github.com/hydraulic-software/conveyor
+        with:
+          command: -Kapp.machines=windows.amd64 make windows-zip
+          agree_to_license: 1  # Required to accept the Conveyor EULA
 
-      # Step 5: Run Conveyor to create the Windows x86 package
-      # This corresponds to "conveyor -Kapp.machines=windows.amd64 make windows-zip"
-      - name: Package Windows (x86) app
-        run: conveyor -Kapp.machines=windows.amd64 make windows-zip
-
-      # Step 6: Upload the resulting binary as a build artifact
-      # This makes the files in the 'output' folder available for download.
-      - name: Upload Windows build artifact
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          # The name of the artifact file you will download
-          name: HINT-Control-Windows-x86
-          # The folder where Conveyor places the output. Check your project if this is different.
-          path: output/
+          name: windows-x86-binary
+          path: output/  # Adjust if your output folder is different; the build instructions say it's in the project root
