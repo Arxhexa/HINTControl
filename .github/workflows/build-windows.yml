@@ -1,0 +1,67 @@
+# This is a GitHub Actions workflow to build the Windows x86 version of your app.
+# It follows the instructions from your project's README.
+
+name: Build for Windows (x86)
+
+# This section defines when the action will run.
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+  # Runs on pushes to the main/master branch
+  push:
+    branches: [ "main", "master" ]
+
+  # (Optional) Runs on pull requests targeting the main/master branch
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  # The name of the job
+  build-windows:
+    # Conveyor can cross-compile, so we can use a cheaper/faster Linux runner
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out your repository's code
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up the Java Development Kit (JDK) needed for the Gradle build
+      # Most Kotlin Multiplatform projects use Java 17, but you can change this if needed.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Step 3: Run the Gradle build command
+      # This corresponds to "./gradlew :desktop:build"
+      # We add 'chmod' to ensure the gradlew script is executable on the runner.
+      - name: Build with Gradle
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :desktop:build
+
+      # Step 4: Set up Conveyor
+      # This uses the official action to download and install Conveyor.
+      # For public GitHub repos, a license key is often not needed if your
+      # conveyor.conf file points to your repo. For private repos,
+      # you would need to add a CONVEYOR_LICENSE_KEY secret.
+      - name: Set up Conveyor
+        uses: hydraulic-software/conveyor-action@v1
+
+      # Step 5: Run Conveyor to create the Windows x86 package
+      # This corresponds to "conveyor -Kapp.machines=windows.amd64 make windows-zip"
+      - name: Package Windows (x86) app
+        run: conveyor -Kapp.machines=windows.amd64 make windows-zip
+
+      # Step 6: Upload the resulting binary as a build artifact
+      # This makes the files in the 'output' folder available for download.
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # The name of the artifact file you will download
+          name: HINT-Control-Windows-x86
+          # The folder where Conveyor places the output. Check your project if this is different.
+          path: output/
