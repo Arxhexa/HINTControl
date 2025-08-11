@@ -49,7 +49,7 @@ jobs:
       # conveyor.conf file points to your repo. For private repos,
       # you would need to add a CONVEYOR_LICENSE_KEY secret.
       - name: Set up Conveyor
-        uses: hydraulic-software/conveyor-action@v1
+        uses: hydraulic/conveyor-action@v1
 
       # Step 5: Run Conveyor to create the Windows x86 package
       # This corresponds to "conveyor -Kapp.machines=windows.amd64 make windows-zip"
